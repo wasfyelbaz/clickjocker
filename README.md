@@ -40,6 +40,14 @@ $ python3 clickjocker.py -v -d example.com
 
 You can test the ClickJacking vulnerability on this [awesome lab](https://github.com/auth0-blog/clickjacking-sample-app).
 
+## Local Testing
+
+I am looking to continue working on this project in my spare time.
+
+Functionalities to be added:
+  - Test list of domains
+  - Add threading
+
 ## Disclaimer
 
 This tool is only for educational purposes, and I am not responsible for using this tool in any illegal activities.
