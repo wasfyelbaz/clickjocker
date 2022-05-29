@@ -12,41 +12,50 @@ pip3 install -r requirements.txt
 
 ## Usage
 ```commandline
-python3 clickjocker.py --help
+./clickjocker --help
 ```
 ```commandline
-usage: clickjocker.py [-h] -d  [-v] [-l] [-o]
+usage: clickjocker [-h] [-d] [-v] [-l] [-t] [-o]
 
 Developed By elitebaz
 
 optional arguments:
-  -h, --help      show this help message and exit
-  -d , --domain   Domain to scan.
-  -v, --verbose   Turn on stdout and print details.
-  -l , --list     Path to list of domains to scan.
-  -o , --output   Path to the output list of vulnerable domains.
+  -h, --help       show this help message and exit
+  -d , --domain    Domain to scan.
+  -v, --verbose    Turn on stdout and print details.
+  -l , --list      Path to list of domains to scan.
+  -t , --threads   Number of threads.
+  -o , --output    Path to the output list of vulnerable domains.
 ```
 
 ## Example
 
+Take single domain as input as argument
 ```commandline
-$ python3 clickjocker.py -v -d example.com
+$ ./clickjocker.py -v -d example.com
 
 [+] http://example.com is vulnerable to clickjacking
 [+] Creating POC for http://example.com
 ```
 
+Take input from stdin
+```commandline
+$ cat hosts.txt | ./clickjocker
+
+http://example.com
+...
+```
+
+Take list file as input
+```commandline
+$ ./clickjocker.py -l hosts.txt
+
+http://example.com
+...
+```
 ## Local Testing
 
 You can test the ClickJacking vulnerability on this [awesome lab](https://github.com/auth0-blog/clickjacking-sample-app).
-
-## Local Testing
-
-I am looking to continue working on this project in my spare time.
-
-Functionalities to be added:
-  - Test list of domains
-  - Add threading
 
 ## Disclaimer
 
