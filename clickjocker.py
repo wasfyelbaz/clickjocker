@@ -1,12 +1,17 @@
+#!/usr/bin/env python3
+import random
+import sys
 import requests
 import argparse
-import random
+from concurrent.futures import ThreadPoolExecutor
+
 
 parser = argparse.ArgumentParser(description='Developed By elitebaz')
-parser.add_argument('-d', '--domain', type=str, metavar='', required=True, help="Domain to scan.")
+parser.add_argument('-d', '--domain', type=str, metavar='', help="Domain to scan.")
 parser.add_argument('-v', '--verbose', action='store_true', help="Turn on stdout and print details.")
-parser.add_argument('-l', '--list', type=str, metavar='', required=False, help="Path to list of domains to scan.")
-parser.add_argument('-o', '--output', type=str, metavar='', required=False, help="Path to the output list of vulnerable domains.")
+parser.add_argument('-l', '--list', type=str, metavar='', help="Path to list of domains to scan.")
+parser.add_argument('-t', '--threads', type=int, metavar='', help="Number of threads.")
+parser.add_argument('-o', '--output', type=str, metavar='', help="Path to the output list of vulnerable domains.")
 
 args = parser.parse_args()
 
@@ -36,20 +41,25 @@ poc_html = """<html>
 </html>
 """
 
+number_of_threads = 5
+
+
+def print_to_stdout(*a):
+    """outputs to stdout"""
+    print(*a, file=sys.stdout)
+
 
 def url_format(domain):
     """:returns fixed format of url or false if url is not fixable"""
     try:
-        url = domain
-
         # check for http first
         if "http://" not in domain:
             # check for https if http is not found
             if "https://" not in domain:
                 # add http;// if both not found
-                url = "http://" + domain
+                domain = "http://" + domain
 
-        return url
+        return domain.rstrip()
 
     except Exception as e:
         if args.verbose:
@@ -60,7 +70,7 @@ def url_format(domain):
 def scan_url_for_clickjacking_vuln(url):
 
     try:
-        vuln = True
+        vuln = url
 
         response = requests.get(url, headers=headers, timeout=10)
 
@@ -94,22 +104,54 @@ def generate_poc(url):
         poc.write(poc_html.replace("VULN_URL", url))
 
 
+def threaded_scan(url_list, threads):
+    futures_list = []
+    # start Thread Pool Executor with n workers
+    with ThreadPoolExecutor(max_workers=number_of_threads) as executor:
+        # loop through domains list
+        for url in url_list:
+            # create futures
+            url = url_format(url)
+            if url != -1:
+                futures = executor.submit(scan_url_for_clickjacking_vuln, url)
+                # append futures to futures list
+                futures_list.append(futures)
+        # loop through futures list
+        for future in futures_list:
+            try:
+                is_vuln = future.result(timeout=60)
+                # check if url is vulnerable
+                if is_vuln != -1 and is_vuln is not False:
+                    if args.verbose:
+                        print(f"[+] {is_vuln} is vulnerable to clickjacking")
+                        print(f"[+] Creating POC for {is_vuln}")
+                    else:
+                        print_to_stdout(is_vuln)
+                    # generate PoC
+                    generate_poc(is_vuln)
+            except Exception as e:
+                print(e)
+
+
 def main():
 
     # check and fix url format
-    url = url_format(args.domain)
+    global number_of_threads
+    list_to_scan = []
 
-    is_vuln = scan_url_for_clickjacking_vuln(url)
+    if args.threads:
+        number_of_threads = args.threads
 
-    if url != -1 and is_vuln != -1 and is_vuln != False:
+    if args.domain:
+        list_to_scan.append(url_format(args.domain))
 
-        if args.verbose:
-            print(f"[+] {url} is vulnerable to clickjacking")
-            print(f"[+] Creating POC for {url}")
-        else:
-            print(url)
+    elif args.list:
+        with open(args.list, "r") as list_file:
+            list_to_scan = list_file.readlines()
+    else:
+        list_to_scan = sys.stdin
 
-        generate_poc(url)
+    threaded_scan(list_to_scan, number_of_threads)
 
 
 if __name__ == "__main__":
